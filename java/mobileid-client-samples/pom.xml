@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+
+    <modelVersion>4.0.0</modelVersion>
+    <parent>
+        <groupId>ch.swisscom.mid.client</groupId>
+        <artifactId>mid-client-parent</artifactId>
+        <version>0.9.0</version>
+    </parent>
+
+    <artifactId>mid-client-samples</artifactId>
+    <version>0.9.0</version>
+    <name>mid-client-samples</name>
+    <description>MobileID Client - Usage Samples</description>
+    <packaging>jar</packaging>
+
+    <dependencies>
+        <!-- Internal dependencies -->
+        <dependency>
+            <groupId>ch.swisscom.mid.client</groupId>
+            <artifactId>mid-client-rest</artifactId>
+            <version>${project.version}</version>
+            <!-- this automatically brings the mid-client-core dependency -->
+        </dependency>
+    </dependencies>
+
+</project>
