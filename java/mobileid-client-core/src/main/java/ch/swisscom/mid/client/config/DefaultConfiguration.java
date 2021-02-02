@@ -21,8 +21,12 @@ public class DefaultConfiguration {
 
     public static final String DEFAULT_INTERNET_BASE_URL = "https://mobileid.swisscom.com";
     public static final String DEFAULT_LAN_I_BASE_URL = "https://195.65.233.218/";
+
     public static final String REST_ENDPOINT_SUB_URL = "/rest/service";
-    public static final String SOAP_ENDPOINT_SERVICE_SUB_URL = "/soap/services/MSS_SignaturePort";
+    public static final String SOAP_SIGNATURE_PORT_SUB_URL = "/soap/services/MSS_SignaturePort";
+    public static final String SOAP_STATUS_QUERY_PORT_SUB_URL = "/soap/services/MSS_StatusQueryPort";
+    public static final String SOAP_RECEIPT_PORT_SUB_URL = "/soap/services/MSS_ReceiptPort";
+    public static final String SOAP_PROFILE_QUERY_PORT_SUB_URL = "/soap/services/MSS_ProfileQueryPort";
 
     public static final String DEFAULT_MSSP_ID = "http://mid.swisscom.ch/";
 

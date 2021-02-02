@@ -24,6 +24,7 @@ import org.junit.jupiter.api.Test;
 
 import ch.swisscom.mid.client.MIDClient;
 import ch.swisscom.mid.client.MIDFlowException;
+import ch.swisscom.mid.client.config.DefaultConfiguration;
 import ch.swisscom.mid.client.impl.MIDClientImpl;
 import ch.swisscom.mid.client.model.*;
 
@@ -62,7 +63,7 @@ public class SyncSignatureTest {
     @Test
     public void testSignature_success() {
         server.stubFor(
-            post(urlEqualTo("/rest/service"))
+            post(urlEqualTo(DefaultConfiguration.REST_ENDPOINT_SUB_URL))
                 .willReturn(
                     aResponse()
                         .withHeader("Content-Type", MimeType.JSON.toString())

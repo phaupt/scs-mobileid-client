@@ -13,23 +13,24 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package ch.swisscom.mid.client.rest;
+package ch.swisscom.mid.client.soap;
 
 import com.github.tomakehurst.wiremock.WireMockServer;
 import com.github.tomakehurst.wiremock.http.MimeType;
-import com.github.tomakehurst.wiremock.stubbing.Scenario;
 
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 import ch.swisscom.mid.client.MIDClient;
+import ch.swisscom.mid.client.MIDFlowException;
 import ch.swisscom.mid.client.config.DefaultConfiguration;
 import ch.swisscom.mid.client.impl.MIDClientImpl;
 import ch.swisscom.mid.client.model.*;
 
-import static ch.swisscom.mid.client.rest.TestSupport.buildConfig;
-import static ch.swisscom.mid.client.rest.TestSupport.fileToString;
+import static ch.swisscom.mid.client.soap.TestSupport.buildConfig;
+import static ch.swisscom.mid.client.soap.TestSupport.fileToString;
 import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
 import static com.github.tomakehurst.wiremock.client.WireMock.post;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlEqualTo;
@@ -37,8 +38,10 @@ import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.options
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.notNullValue;
+import static org.junit.jupiter.api.Assertions.fail;
 
-public class AsyncSignatureTest {
+@Disabled
+public class SyncSignatureTest {
 
     private static WireMockServer server;
     private static MIDClient client;
@@ -62,56 +65,64 @@ public class AsyncSignatureTest {
     @Test
     public void testSignature_success() {
         server.stubFor(
-            post(urlEqualTo(DefaultConfiguration.REST_ENDPOINT_SUB_URL))
-                .inScenario("Async signature")
-                .whenScenarioStateIs(Scenario.STARTED)
+            post(urlEqualTo(DefaultConfiguration.SOAP_SIGNATURE_PORT_SUB_URL))
                 .willReturn(
                     aResponse()
-                        .withHeader("Content-Type", MimeType.JSON.toString())
-                        .withBody(fileToString("/samples/rest-response-async-signature.json")))
-                .willSetStateTo("Signature running - poll 0"));
-
-        server.stubFor(
-            post(urlEqualTo("/rest/service"))
-                .inScenario("Async signature")
-                .whenScenarioStateIs("Signature running - poll 0")
-                .willReturn(
-                    aResponse()
-                        .withHeader("Content-Type", MimeType.JSON.toString())
-                        .withBody(fileToString("/samples/rest-response-status-outstanding.json")))
-                .willSetStateTo("Signature running - poll 1")
-        );
-
-        server.stubFor(
-            post(urlEqualTo("/rest/service"))
-                .inScenario("Async signature")
-                .whenScenarioStateIs("Signature running - poll 1")
-                .willReturn(
-                    aResponse()
-                        .withHeader("Content-Type", MimeType.JSON.toString())
-                        .withBody(fileToString("/samples/rest-response-status-signature.json")))
-                .willSetStateTo("Signature finished")
-        );
+                        .withHeader("Content-Type", MimeType.XML.toString())
+                        .withBody(fileToString("/samples/rest-response-signature.json"))));
 
         SignatureRequest signatureRequest = buildSignatureRequest();
-        SignatureResponse response = client.requestAsyncSignature(signatureRequest);
-        assertThat(response.getStatus().getStatusCode(), is(StatusCode.REQUEST_OK));
-        assertThat(response.getStatus().getStatusCodeString(), is("100"));
-        assertThat(response.getStatus().getStatusMessage(), is("REQUEST_OK"));
-        assertThat(response.getSignatureProfile(), is(TestData.CUSTOM_SIGNATURE_PROFILE));
-        assertThat(response.getTracking(), is(notNullValue()));
-        assertThat(response.getTracking().getMobileUserMsisdn(), is(TrialNumbers.ONE_THAT_GIVES_MISSING_PARAM));
-        assertThat(response.getTracking().getTransactionId(), is(TestData.CUSTOM_TRANS_ID));
-
-        response = client.pollForSignatureStatus(response.getTracking());
-        assertThat(response.getStatus().getStatusCode(), is(StatusCode.OUTSTANDING_TRANSACTION));
-        assertThat(response.getStatus().getStatusCodeString(), is("504"));
-
-        response = client.pollForSignatureStatus(response.getTracking());
+        SignatureResponse response = client.requestSyncSignature(signatureRequest);
         assertThat(response.getStatus().getStatusCode(), is(StatusCode.SIGNATURE));
         assertThat(response.getStatus().getStatusCodeString(), is("500"));
+        assertThat(response.getStatus().getStatusMessage(), is("SIGNATURE"));
+        assertThat(response.getSignatureProfile(), is(TestData.CUSTOM_SIGNATURE_PROFILE));
         assertThat(response.getBase64Signature(), is(notNullValue()));
         assertThat(response.getBase64Signature().length(), is(TestData.BASE64_SIGNATURE_LENGTH));
+    }
+
+    @Test
+    public void testSignature_userCancel() {
+        server.stubFor(
+            post(urlEqualTo("/rest/service"))
+                .willReturn(
+                    aResponse()
+                        .withStatus(500)
+                        .withHeader("Content-Type", MimeType.JSON.toString())
+                        .withBody(fileToString("/samples/rest-response-fault-user-cancel.json"))));
+
+        SignatureRequest signatureRequest = buildSignatureRequest();
+        try {
+            client.requestSyncSignature(signatureRequest);
+            fail("A MIDFlowException was expected at this point");
+        } catch (MIDFlowException exception) {
+            Fault fault = exception.getFault();
+            assertThat(fault.getFailureReason(), is(FailureReason.MID_SERVICE_FAILURE));
+            assertThat(fault.getStatusCode(), is(StatusCode.USER_CANCEL));
+            assertThat(fault.getStatusCodeString(), is("_401"));
+        }
+    }
+
+    @Test
+    public void testSignature_conFailure_responseTimeout() {
+        server.stubFor(
+            post(urlEqualTo("/rest/service"))
+                .willReturn(
+                    aResponse()
+                        .withStatus(200)
+                        .withBody("")
+                        .withFixedDelay(5000)));
+
+        SignatureRequest signatureRequest = buildSignatureRequest();
+        try {
+            client.requestSyncSignature(signatureRequest);
+            fail("A MIDFlowException was expected at this point");
+        } catch (MIDFlowException exception) {
+            Fault fault = exception.getFault();
+            assertThat(fault.getFailureReason(), is(FailureReason.RESPONSE_TIMEOUT_FAILURE));
+            assertThat(fault.getStatusCode(), is(StatusCode.INTERNAL_ERROR));
+            assertThat(fault.getStatusCodeString(), is("INTERNAL_ERROR"));
+        }
     }
 
     // ----------------------------------------------------------------------------------------------------

@@ -13,24 +13,24 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package ch.swisscom.mid.client.rest;
+package ch.swisscom.mid.client.soap;
 
 import com.github.tomakehurst.wiremock.WireMockServer;
 import com.github.tomakehurst.wiremock.http.MimeType;
 
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 import ch.swisscom.mid.client.MIDClient;
-import ch.swisscom.mid.client.config.DefaultConfiguration;
 import ch.swisscom.mid.client.impl.MIDClientImpl;
 import ch.swisscom.mid.client.model.ProfileRequest;
 import ch.swisscom.mid.client.model.ProfileResponse;
 import ch.swisscom.mid.client.model.SignatureProfiles;
 
-import static ch.swisscom.mid.client.rest.TestSupport.buildConfig;
-import static ch.swisscom.mid.client.rest.TestSupport.fileToString;
+import static ch.swisscom.mid.client.soap.TestSupport.buildConfig;
+import static ch.swisscom.mid.client.soap.TestSupport.fileToString;
 import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
 import static com.github.tomakehurst.wiremock.client.WireMock.post;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlEqualTo;
@@ -38,6 +38,7 @@ import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.options
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.contains;
 
+@Disabled
 public class ProfileQueryTest {
 
     private static WireMockServer server;
@@ -62,7 +63,7 @@ public class ProfileQueryTest {
     @Test
     public void testProfileQuery_success() {
         server.stubFor(
-            post(urlEqualTo(DefaultConfiguration.REST_ENDPOINT_SUB_URL))
+            post(urlEqualTo("/rest/service"))
                 .willReturn(
                     aResponse()
                         .withHeader("Content-Type", MimeType.JSON.toString())
