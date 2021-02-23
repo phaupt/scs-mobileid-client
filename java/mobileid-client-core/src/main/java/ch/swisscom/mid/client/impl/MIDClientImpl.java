@@ -18,7 +18,7 @@ package ch.swisscom.mid.client.impl;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.LinkedList;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.ServiceLoader;
 
@@ -107,7 +107,7 @@ public class MIDClientImpl implements MIDClient {
 
     private List<ComProtocolHandler> loadComProtocolHandlers() {
         ServiceLoader<ComProtocolHandler> loader = ServiceLoader.load(ComProtocolHandler.class);
-        List<ComProtocolHandler> resultList = new LinkedList<>();
+        List<ComProtocolHandler> resultList = new ArrayList<>();
         loader.iterator().forEachRemaining(element -> {
             resultList.add(element);
             logClient.debug("Found MID client protocol implementation for: {}", element.getImplementedComProtocol());

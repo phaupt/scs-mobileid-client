@@ -15,7 +15,7 @@
  */
 package ch.swisscom.mid.client.model;
 
-import java.util.LinkedList;
+import java.util.ArrayList;
 import java.util.List;
 
 import ch.swisscom.mid.client.config.DefaultConfiguration;
@@ -44,7 +44,7 @@ public class ProfileRequest {
 
     public List<String> getExtensionParams() {
         if (extensionParams == null) {
-            extensionParams = new LinkedList<>();
+            extensionParams = new ArrayList<>();
         }
         return extensionParams;
     }

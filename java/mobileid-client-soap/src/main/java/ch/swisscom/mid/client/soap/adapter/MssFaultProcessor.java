@@ -23,6 +23,7 @@ import java.net.ConnectException;
 import java.net.SocketTimeoutException;
 
 import javax.net.ssl.SSLException;
+import javax.xml.namespace.QName;
 import javax.xml.soap.SOAPFault;
 import javax.xml.ws.soap.SOAPFaultException;
 
@@ -44,7 +45,8 @@ public class MssFaultProcessor {
                     StatusCode faultStatusCode = StatusCode.INTERNAL_ERROR;
                     if (soapFault.getFaultSubcodes() != null &&
                         soapFault.getFaultSubcodes().hasNext()) {
-                        String statusCodeString = soapFault.getFaultSubcodes().next().getLocalPart();
+                        QName element = (QName) soapFault.getFaultSubcodes().next();
+                        String statusCodeString = element.getLocalPart();
                         faultStatusCode = StatusCode.getByStatusCodeString(statusCodeString);
                     }
                     String faultStatusDetail = soapFault.getDetail().getTextContent();

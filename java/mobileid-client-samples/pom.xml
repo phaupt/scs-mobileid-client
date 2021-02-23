@@ -23,6 +23,12 @@
             <version>${project.version}</version>
             <!-- this automatically brings the mid-client-core dependency -->
         </dependency>
+        <dependency>
+            <groupId>ch.swisscom.mid.client</groupId>
+            <artifactId>mid-client-soap</artifactId>
+            <version>${project.version}</version>
+            <!-- this automatically brings the mid-client-core dependency -->
+        </dependency>
     </dependencies>
 
 </project>

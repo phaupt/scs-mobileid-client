@@ -15,7 +15,7 @@
  */
 package ch.swisscom.mid.client.model;
 
-import java.util.LinkedList;
+import java.util.ArrayList;
 import java.util.List;
 
 import ch.swisscom.mid.client.config.DefaultConfiguration;
@@ -31,7 +31,7 @@ public class SignatureRequest {
 
     private String minorVersion = DefaultConfiguration.SIGNATURE_REQUEST_MINOR_VERSION;
 
-    private final List<AdditionalService> additionalServices = new LinkedList<>();
+    private final List<AdditionalService> additionalServices = new ArrayList<>();
 
     private DataToBeSigned dataToBeSigned;
 

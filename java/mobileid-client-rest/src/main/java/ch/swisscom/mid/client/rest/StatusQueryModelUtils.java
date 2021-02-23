@@ -15,7 +15,7 @@
  */
 package ch.swisscom.mid.client.rest;
 
-import java.util.LinkedList;
+import java.util.ArrayList;
 import java.util.List;
 
 import ch.swisscom.mid.client.MIDFlowException;
@@ -100,7 +100,7 @@ public class StatusQueryModelUtils {
     }
 
     private static List<AdditionalServiceResponse> processAdditionalServiceResponses(MSSStatusResp response) {
-        List<AdditionalServiceResponse> resultList = new LinkedList<>();
+        List<AdditionalServiceResponse> resultList = new ArrayList<>();
         List<ServiceResponse> serviceResponseList = response.getServiceResponses();
         if (serviceResponseList != null) {
             for (ServiceResponse serviceResponse : serviceResponseList) {

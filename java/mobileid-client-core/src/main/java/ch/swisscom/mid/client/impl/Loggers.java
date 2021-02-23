@@ -17,8 +17,8 @@ package ch.swisscom.mid.client.impl;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
+import java.util.ArrayList;
 import java.util.Collections;
-import java.util.LinkedList;
 import java.util.List;
 
 public class Loggers {
@@ -35,7 +35,7 @@ public class Loggers {
 
     static {
         Field[] allFields = Loggers.class.getDeclaredFields();
-        ALL_OF_THEM = new LinkedList<>();
+        ALL_OF_THEM = new ArrayList<>();
         for (Field field : allFields) {
             if (Modifier.isStatic(field.getModifiers()) && !field.getName().equals("ALL_OF_THEM")) {
                 try {

@@ -22,41 +22,54 @@ import java.util.List;
 
 import ch.swisscom.mid.client.config.ClientConfiguration;
 import ch.swisscom.mid.client.model.DataToBeSigned;
+import ch.swisscom.mid.client.model.ProfileRequest;
 import ch.swisscom.mid.client.model.SignatureRequest;
 import ch.swisscom.mid.client.model.UserLangAdditionalService;
 import ch.swisscom.mid.client.utils.Utils;
 import fi.ficom.mss.ts102204.v1_0.ObjectFactory;
 
-public class MssModelBuilder {
+public class MssRequestBuilder {
 
-    public static MSSSignatureReqType createSignatureReqType(ClientConfiguration config,
-                                                             SignatureRequest signatureRequest,
-                                                             boolean sync) {
+    public static MSSSignatureReqType createSignatureReq(ClientConfiguration config,
+                                                         SignatureRequest signatureRequest,
+                                                         boolean sync) {
         MSSSignatureReqType request = new MSSSignatureReqType();
 
         // Set required MinorVersion and MajorVersion
-        request.setMajorVersion(BigInteger.valueOf(Long.parseLong(signatureRequest.getMajorVersion())));
-        request.setMinorVersion(BigInteger.valueOf(Long.parseLong(signatureRequest.getMinorVersion())));
+        request.setMajorVersion(longToBigInteger(signatureRequest.getMajorVersion()));
+        request.setMinorVersion(longToBigInteger(signatureRequest.getMinorVersion()));
         request.setTimeOut(BigInteger.valueOf(signatureRequest.getUserResponseTimeOutInSeconds()));
         // Set the messaging mode
         request.setMessagingMode(sync ? MessagingModeType.SYNCH : MessagingModeType.ASYNCH_CLIENT_SERVER);
         /* now set the elements */
         // Set the AP info
-        request.setAPInfo(buildApInfo(config.getApId(), config.getApPassword()));
+        request.setAPInfo(createApInfo(config.getApId(), config.getApPassword()));
         // Set the MSSP info
-        request.setMSSPInfo(buildMSSPInfo(config));
+        request.setMSSPInfo(createMsspInfo(config));
         // Set the MobileUser
-        request.setMobileUser(buildMobileUser(signatureRequest.getMobileUser().getMsisdn()));
+        request.setMobileUser(createMobileUser(signatureRequest.getMobileUser().getMsisdn()));
         // Set the DTBS
-        request.setDataToBeSigned(buildDTBS(signatureRequest.getDataToBeSigned()));
+        request.setDataToBeSigned(createDtbs(signatureRequest.getDataToBeSigned()));
         // Set the MSS_Format
         request.setMSSFormat(null);
         // Set the SignatureProfile
-        request.setSignatureProfile(buildSignatureProfile(signatureRequest.getSignatureProfile()));
+        request.setSignatureProfile(createSignatureProfile(signatureRequest.getSignatureProfile()));
         // Set the Additional Services
-        request.setAdditionalServices(buildAdditionalServiceList(signatureRequest));
+        request.setAdditionalServices(createAdditionalServiceList(signatureRequest));
 
         return request;
+    }
+
+    public static MSSProfileReqType createProfileReq(ClientConfiguration config,
+                                                     ProfileRequest profileRequest) {
+        MSSProfileReqType mssProfileReq = new MSSProfileReqType();
+        mssProfileReq.setAPInfo(createApInfo(config.getApId(), config.getApPassword()));
+        mssProfileReq.setMajorVersion(longToBigInteger(profileRequest.getMajorVersion()));
+        mssProfileReq.setMinorVersion(longToBigInteger(profileRequest.getMinorVersion()));
+        mssProfileReq.setMSSPInfo(createMsspInfo(config));
+        mssProfileReq.setMobileUser(createMobileUser(profileRequest.getMobileUser().getMsisdn()));
+        mssProfileReq.setParams(Utils.joinListOfStrings(profileRequest.getExtensionParams(), " "));
+        return mssProfileReq;
     }
 
     // ----------------------------------------------------------------------------------------------------
@@ -69,7 +82,7 @@ public class MssModelBuilder {
      * @throws ch.swisscom.mid.client.model.DataAssemblyException in case errors are encountered while constructing the
      *                                                            {@link MessageAbstractType.APInfo} instance
      */
-    private static MessageAbstractType.APInfo buildApInfo(String apId, String apPassword) {
+    private static MessageAbstractType.APInfo createApInfo(String apId, String apPassword) {
         MessageAbstractType.APInfo apInfoType = new MessageAbstractType.APInfo();
         apInfoType.setAPID(apId);
         apInfoType.setAPPWD(apPassword);
@@ -85,7 +98,7 @@ public class MssModelBuilder {
      *
      * @return the constructed {@link MessageAbstractType.MSSPInfo} instance
      */
-    private static MessageAbstractType.MSSPInfo buildMSSPInfo(ClientConfiguration config) {
+    private static MessageAbstractType.MSSPInfo createMsspInfo(ClientConfiguration config) {
         MessageAbstractType.MSSPInfo msspInfo = new MessageAbstractType.MSSPInfo();
         MeshMemberType meshMemberType = new MeshMemberType();
         meshMemberType.setURI(config.getMsspId());
@@ -101,7 +114,7 @@ public class MssModelBuilder {
      * @param msisdn the mobile phone number of the mobile user
      * @return the constructed {@link MobileUserType} instance
      */
-    private static MobileUserType buildMobileUser(String msisdn) {
+    private static MobileUserType createMobileUser(String msisdn) {
         MobileUserType mobileUserType = new MobileUserType();
         mobileUserType.setMSISDN(msisdn);
         return mobileUserType;
@@ -113,7 +126,7 @@ public class MssModelBuilder {
      * @return the constructed {@link DataType} instance
      * @value the actual value of the DTBS
      */
-    private static DataType buildDTBS(DataToBeSigned dataToBeSigned) {
+    private static DataType createDtbs(DataToBeSigned dataToBeSigned) {
         DataType dataType = new DataType();
         dataType.setMimeType(dataToBeSigned.getMimeType());
         dataType.setEncoding(dataToBeSigned.getEncoding());
@@ -128,13 +141,13 @@ public class MssModelBuilder {
      *
      * @return the constructed {@link MssURIType} instance with the URI configured for the key
      */
-    private static MssURIType buildSignatureProfile(String signatureProfile) {
+    private static MssURIType createSignatureProfile(String signatureProfile) {
         MssURIType uriType = new MssURIType();
         uriType.setMssURI(signatureProfile);
         return uriType;
     }
 
-    private static MSSSignatureReqType.AdditionalServices buildAdditionalServiceList(SignatureRequest signatureRequest) {
+    private static MSSSignatureReqType.AdditionalServices createAdditionalServiceList(SignatureRequest signatureRequest) {
         if (signatureRequest.getAdditionalServices().size() <= 0) {
             return null;
         }
@@ -158,6 +171,10 @@ public class MssModelBuilder {
             serviceList.getService().add(additionalService);
         }
         return serviceList;
+    }
+
+    private static BigInteger longToBigInteger(String valueAsString) {
+        return BigInteger.valueOf(Long.parseLong(valueAsString));
     }
 
 }

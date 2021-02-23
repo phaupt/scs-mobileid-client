@@ -17,7 +17,10 @@ package ch.swisscom.mid.client.soap;
 
 import org.apache.commons.pool2.ObjectPool;
 import org.apache.commons.pool2.impl.GenericObjectPool;
+import org.etsi.uri.ts102204.etsi204_kiuru.MSSProfileQueryType;
 import org.etsi.uri.ts102204.etsi204_kiuru.MSSSignaturePortType;
+import org.etsi.uri.ts102204.v1_1.MSSProfileReqType;
+import org.etsi.uri.ts102204.v1_1.MSSProfileRespType;
 import org.etsi.uri.ts102204.v1_1.MSSSignatureReqType;
 import org.etsi.uri.ts102204.v1_1.MSSSignatureRespType;
 import org.slf4j.Logger;
@@ -33,7 +36,7 @@ import ch.swisscom.mid.client.impl.ComProtocolHandler;
 import ch.swisscom.mid.client.impl.Loggers;
 import ch.swisscom.mid.client.model.*;
 import ch.swisscom.mid.client.soap.adapter.MssFaultProcessor;
-import ch.swisscom.mid.client.soap.adapter.MssModelBuilder;
+import ch.swisscom.mid.client.soap.adapter.MssRequestBuilder;
 import ch.swisscom.mid.client.soap.adapter.MssResponseProcessor;
 
 public class ComProtocolHandlerSoapImpl implements ComProtocolHandler {
@@ -44,6 +47,7 @@ public class ComProtocolHandlerSoapImpl implements ComProtocolHandler {
 
     private ClientConfiguration config;
     private ObjectPool<MssService<MSSSignaturePortType>> mssSignatureServicePool;
+    private ObjectPool<MssService<MSSProfileQueryType>> mssProfileQueryServicePool;
 
     @Override
     public ComProtocol getImplementedComProtocol() {
@@ -56,6 +60,9 @@ public class ComProtocolHandlerSoapImpl implements ComProtocolHandler {
         mssSignatureServicePool = new GenericObjectPool<>(new MssServiceFactory<>(config,
                                                                                   MSSSignaturePortType.class,
                                                                                   config.getUrls()::getSignatureServiceUrl));
+        mssProfileQueryServicePool = new GenericObjectPool<>(new MssServiceFactory<>(config,
+                                                                                     MSSProfileQueryType.class,
+                                                                                     config.getUrls()::getProfileQueryServiceUrl));
         logConfig.info("Initializing MID SOAP client with config: [{}]", config);
     }
 
@@ -69,7 +76,7 @@ public class ComProtocolHandlerSoapImpl implements ComProtocolHandler {
     @Override
     public SignatureResponse requestSyncSignature(SignatureRequest request) {
         logProtocol.info("MSS Signature: Sending request: [{}]", request);
-        MSSSignatureReqType mssSignatureReq = MssModelBuilder.createSignatureReqType(config, request, true);
+        MSSSignatureReqType mssSignatureReq = MssRequestBuilder.createSignatureReq(config, request, true);
         notifyTrafficObserverForApTransId(request.getTrafficObserver(), mssSignatureReq.getAPInfo().getAPTransID());
         MSSSignatureRespType mssSignatureResp;
         MssService<MSSSignaturePortType> mssSignatureService = null;
@@ -112,7 +119,32 @@ public class ComProtocolHandlerSoapImpl implements ComProtocolHandler {
 
     @Override
     public ProfileResponse requestProfile(ProfileRequest request) {
-        return null;
+        logProtocol.info("MSS Profile Query: Sending request: [{}]", request);
+        MSSProfileReqType mssProfileReq = MssRequestBuilder.createProfileReq(config, request);
+        notifyTrafficObserverForApTransId(request.getTrafficObserver(), mssProfileReq.getAPInfo().getAPTransID());
+        MSSProfileRespType mssProfileResp;
+        MssService<MSSProfileQueryType> mssProfileQueryService = null;
+        try {
+            mssProfileQueryService = mssProfileQueryServicePool.borrowObject();
+            mssProfileQueryService.registerTrafficObserverForThisRequest(request.getTrafficObserver());
+            mssProfileResp = mssProfileQueryService.getPort().mssProfileQuery(mssProfileReq);
+            logClient.info("Received MSS Profile Query response: [{}]", mssProfileResp == null ? "null" : "not-null, looks OK");
+        } catch (SOAPFaultException e) {
+            throw new MIDFlowException("SOAP Fault received", e, MssFaultProcessor.processSoapFaultException(e));
+        } catch (Exception e) {
+            throw new MIDFlowException("Error in Profile Query operation.", e,
+                                       MssFaultProcessor.processException(e, FailureReason.MID_SERVICE_FAILURE));
+        } finally {
+            if (mssProfileQueryService != null) {
+                try {
+                    mssProfileQueryService.clearTrafficObserver();
+                    mssProfileQueryServicePool.returnObject(mssProfileQueryService);
+                } catch (Exception e) {
+                    logClient.error("Failed to return MSS Profile Query Port object back to the pool", e);
+                }
+            }
+        }
+        return MssResponseProcessor.processMssProfileQueryResponse(mssProfileResp);
     }
 
     // ----------------------------------------------------------------------------------------------------

@@ -15,7 +15,7 @@
  */
 package ch.swisscom.mid.client.rest;
 
-import java.util.LinkedList;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Supplier;
 
@@ -69,8 +69,8 @@ public class ProfileRequestModelUtils {
                 response.setMobileUser(mobileUserInfo);
             }
             if (mssPQExt.getSscds() != null) {
-                response.setSimDevices(new LinkedList<>());
-                response.setAppDevices(new LinkedList<>());
+                response.setSimDevices(new ArrayList<>());
+                response.setAppDevices(new ArrayList<>());
                 Sscds mssSscds = mssPQExt.getSscds();
                 if (mssSscds.getSim() != null) {
                     Sim mssSim = mssSscds.getSim();
@@ -125,24 +125,40 @@ public class ProfileRequestModelUtils {
             deviceInfo.setPinState(ProfileDevicePinState.getByPinBlockedBooleanValue(pinStatusSupplier.get().getBlocked()));
         }
         if (certificateListSupplier.get() != null && certificateListSupplier.get().size() > 0) {
-            deviceInfo.setCertificates(new LinkedList<>());
+            deviceInfo.setCertificates(new ArrayList<>());
 
             for (MobileUserCertificate mssCert : certificateListSupplier.get()) {
                 ProfileMobileUserCertificate cert = new ProfileMobileUserCertificate();
                 cert.setAlgorithm(mssCert.getAlgorithm());
                 cert.setState(ProfileMobileUserCertificateState.getByStateString(mssCert.getState()));
+
+                CertificateData userCertificate = new CertificateData();
+                List<CertificateData> caCertificates = new ArrayList<>();
+
                 if (mssCert.getX509Certificate() != null && mssCert.getX509Certificate().size() > 0) {
-                    cert.setCertificateAsBase64(mssCert.getX509Certificate().get(0));
-                    if (mssCert.getX509Certificate().size() > 1) {
-                        cert.setCaCertificateAsBase64(mssCert.getX509Certificate().get(1));
+                    userCertificate.setCertificateAsBase64(mssCert.getX509Certificate().get(0));
+                    for (int index = 1; index < mssCert.getX509Certificate().size(); index++) {
+                        CertificateData certificateData = new CertificateData();
+                        certificateData.setCertificateAsBase64(mssCert.getX509Certificate().get(index));
+                        caCertificates.add(certificateData);
                     }
                 }
                 if (mssCert.getX509SubjectName() != null && mssCert.getX509SubjectName().size() > 0) {
-                    cert.setSubjectNameAsBase64(mssCert.getX509SubjectName().get(0));
-                    if (mssCert.getX509SubjectName().size() > 1) {
-                        cert.setCaSubjectNameAsBase64(mssCert.getX509SubjectName().get(1));
+                    userCertificate.setSubjectName(mssCert.getX509SubjectName().get(0));
+                    for (int index = 1; index < mssCert.getX509SubjectName().size(); index++) {
+                        CertificateData certificateData;
+                        if (index - 1 < caCertificates.size()) {
+                            certificateData = caCertificates.get(index - 1);
+                        } else {
+                            certificateData = new CertificateData();
+                            caCertificates.add(certificateData);
+                        }
+                        certificateData.setSubjectName(mssCert.getX509SubjectName().get(index));
                     }
                 }
+
+                cert.setUserCertificate(userCertificate);
+                cert.setCaCertificates(caCertificates);
                 deviceInfo.getCertificates().add(cert);
             }
         }

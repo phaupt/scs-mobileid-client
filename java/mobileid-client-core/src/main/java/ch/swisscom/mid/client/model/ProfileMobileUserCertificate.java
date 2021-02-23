@@ -15,19 +15,17 @@
  */
 package ch.swisscom.mid.client.model;
 
+import java.util.List;
+
 public class ProfileMobileUserCertificate {
 
     private ProfileMobileUserCertificateState state;
 
     private String algorithm;
 
-    private String certificateAsBase64;
+    private CertificateData userCertificate;
 
-    private String subjectNameAsBase64;
-
-    private String caCertificateAsBase64;
-
-    private String caSubjectNameAsBase64;
+    private List<CertificateData> caCertificates;
 
     public ProfileMobileUserCertificateState getState() {
         return state;
@@ -45,36 +43,20 @@ public class ProfileMobileUserCertificate {
         this.algorithm = algorithm;
     }
 
-    public String getCertificateAsBase64() {
-        return certificateAsBase64;
+    public CertificateData getUserCertificate() {
+        return userCertificate;
     }
 
-    public void setCertificateAsBase64(String certificateAsBase64) {
-        this.certificateAsBase64 = certificateAsBase64;
+    public void setUserCertificate(CertificateData userCertificate) {
+        this.userCertificate = userCertificate;
     }
 
-    public String getSubjectNameAsBase64() {
-        return subjectNameAsBase64;
+    public List<CertificateData> getCaCertificates() {
+        return caCertificates;
     }
 
-    public void setSubjectNameAsBase64(String subjectNameAsBase64) {
-        this.subjectNameAsBase64 = subjectNameAsBase64;
-    }
-
-    public String getCaCertificateAsBase64() {
-        return caCertificateAsBase64;
-    }
-
-    public void setCaCertificateAsBase64(String caCertificateAsBase64) {
-        this.caCertificateAsBase64 = caCertificateAsBase64;
-    }
-
-    public String getCaSubjectNameAsBase64() {
-        return caSubjectNameAsBase64;
-    }
-
-    public void setCaSubjectNameAsBase64(String caSubjectNameAsBase64) {
-        this.caSubjectNameAsBase64 = caSubjectNameAsBase64;
+    public void setCaCertificates(List<CertificateData> caCertificates) {
+        this.caCertificates = caCertificates;
     }
 
     @Override
@@ -82,10 +64,8 @@ public class ProfileMobileUserCertificate {
         return "ProfileMobileUserCertificate{" +
                "state=" + state +
                ", algorithm='" + algorithm + '\'' +
-               ", certificateAsBase64='" + (certificateAsBase64 == null ? "null" : "(not-null)") + '\'' +
-               ", subjectNameAsBase64='" + subjectNameAsBase64 + '\'' +
-               ", caCertificateAsBase64='" + (caCertificateAsBase64 == null ? "null" : "(not-null)") + '\'' +
-               ", caSubjectNameAsBase64='" + caSubjectNameAsBase64 + '\'' +
+               ", userCertificate=" + userCertificate +
+               ", caCertificates=" + caCertificates +
                '}';
     }
 }
