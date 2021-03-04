@@ -188,12 +188,12 @@ public class ComProtocolHandlerSoapImpl implements ComProtocolHandler {
             mssReceiptService = mssReceiptServicePool.borrowObject();
             mssReceiptService.registerTrafficObserverForThisRequest(request.getTrafficObserver());
             mssReceiptResp = mssReceiptService.getPort().mssReceipt(mssReceiptReq);
-            logClient.info("Received MSS (async) signature response: [{}]", mssReceiptResp == null ? "null" : "not-null, looks OK");
+            logClient.info("Received MSS Receipt response: [{}]", mssReceiptResp == null ? "null" : "not-null, looks OK");
         } catch (SOAPFaultException e) {
             throw new MIDFlowException("SOAP Fault received", e,
                                        MssFaultProcessor.processSoapFaultException(e));
         } catch (Exception e) {
-            throw new MIDFlowException("Error in (async) Signature operation.", e,
+            throw new MIDFlowException("Error in MSS Receipt operation.", e,
                                        MssFaultProcessor.processException(e, FailureReason.MID_SERVICE_FAILURE));
         } finally {
             if (mssReceiptService != null) {

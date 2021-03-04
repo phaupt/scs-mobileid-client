@@ -28,8 +28,8 @@ public class Utils {
     public static ClientConfiguration buildClientConfig() {
         ClientConfiguration config = new ClientConfiguration();
         config.setProtocolToRest();
-        config.setApId("<My AP_ID>");
-        config.setApPassword("not-needed");
+        config.setApId("<My AP ID>");
+        config.setApPassword("<My AP password>");
 
         UrlsConfiguration urls = config.getUrls();
         urls.setAllServiceUrlsTo(DefaultConfiguration.DEFAULT_INTERNET_BASE_URL + DefaultConfiguration.REST_ENDPOINT_SUB_URL);
@@ -38,7 +38,7 @@ public class Utils {
         tls.setKeyStoreFile("/home/localuser/mid_keystore.jks");
         tls.setKeyStorePassword("secret");
         tls.setKeyStoreKeyPassword("secret");
-        tls.setKeyStoreCertificateAlias("mid-cert");
+        tls.setKeyStoreCertificateAlias("my-cert-alias");
         tls.setTrustStoreFile("/home/localuser/truststore.jks");
         tls.setTrustStorePassword("secret");
         tls.setHostnameVerification(true);

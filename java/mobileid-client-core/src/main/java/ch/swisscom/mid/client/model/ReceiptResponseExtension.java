@@ -19,11 +19,11 @@ public class ReceiptResponseExtension {
 
     private ReceiptMessagingMode messagingMode;
 
-    private boolean clientAck;
+    private Boolean clientAck;
 
-    private boolean networkAck;
+    private Boolean networkAck;
 
-    private boolean userAck;
+    private Boolean userAck;
 
     private String userResponse;
 
@@ -37,27 +37,27 @@ public class ReceiptResponseExtension {
         this.messagingMode = messagingMode;
     }
 
-    public boolean isClientAck() {
+    public Boolean isClientAck() {
         return clientAck;
     }
 
-    public void setClientAck(boolean clientAck) {
+    public void setClientAck(Boolean clientAck) {
         this.clientAck = clientAck;
     }
 
-    public boolean isNetworkAck() {
+    public Boolean isNetworkAck() {
         return networkAck;
     }
 
-    public void setNetworkAck(boolean networkAck) {
+    public void setNetworkAck(Boolean networkAck) {
         this.networkAck = networkAck;
     }
 
-    public boolean isUserAck() {
+    public Boolean isUserAck() {
         return userAck;
     }
 
-    public void setUserAck(boolean userAck) {
+    public void setUserAck(Boolean userAck) {
         this.userAck = userAck;
     }
 

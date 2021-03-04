@@ -154,10 +154,12 @@ public class MssResponseProcessor {
                     .getStatusDetail()
                     .getRegistrationOutputOrEncryptedRegistrationOutputOrEncryptionCertificates();
                 if (mssResponseExtensionList.size() == 1) {
-                    receiptResponseExtension = processReceiptRespExtension(
-                        (ReceiptExtensionType) mssStatus.getStatusDetail()
+                    @SuppressWarnings("unchecked")
+                    JAXBElement<ReceiptExtensionType> receiptExtensionTypeElement =
+                        (JAXBElement<ReceiptExtensionType>) mssStatus.getStatusDetail()
                             .getRegistrationOutputOrEncryptedRegistrationOutputOrEncryptionCertificates()
-                            .get(0));
+                            .get(0);
+                    receiptResponseExtension = processReceiptRespExtension(receiptExtensionTypeElement.getValue());
                 } else {
                     logProtocol.warn("Expected one MSS receipt extension in the MSS Receipt response. " +
                                      "Instead found [{}] extensions. " +

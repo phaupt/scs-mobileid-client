@@ -231,8 +231,11 @@ public class MssRequestBuilder {
         mssExtension.setUserAck(extension.isRequestUserAck());
         mssExtension.setReceiptProfile(mssReceiptProfile);
 
+        ch.swisscom.ts102204.ext.v1_0.ObjectFactory objectFactory = new ch.swisscom.ts102204.ext.v1_0.ObjectFactory();
+
         StatusDetailType mssStatusDetail = new StatusDetailType();
-        mssStatusDetail.getRegistrationOutputOrEncryptedRegistrationOutputOrEncryptionCertificates().add(mssExtension);
+        mssStatusDetail.getRegistrationOutputOrEncryptedRegistrationOutputOrEncryptionCertificates()
+            .add(objectFactory.createReceiptRequestExtension(mssExtension));
         return mssStatusDetail;
     }
 

@@ -31,4 +31,13 @@ public enum UserLanguage {
     public String getValue() {
         return value;
     }
+
+    public static UserLanguage getByValue(String value) {
+        for (UserLanguage element : values()) {
+            if (element.getValue().equals(value)) {
+                return element;
+            }
+        }
+        throw new IllegalArgumentException("Cannot find a valid " + UserLanguage.class.getSimpleName() + " for value [" + value + "]");
+    }
 }

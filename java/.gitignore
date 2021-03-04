@@ -7,3 +7,4 @@
 target/
 build/
 mobileid-client-samples/src/main/java/ch/swisscom/mid/client/samples/TestSoap.java
+local-*.*

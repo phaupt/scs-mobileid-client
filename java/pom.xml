@@ -166,7 +166,7 @@
         <module>mobileid-client-core</module>
         <module>mobileid-client-rest</module>
         <module>mobileid-client-soap</module>
-        <module>mobileid-client-samples</module>
+        <module>mobileid-client-usage</module>
     </modules>
 
 </project>
