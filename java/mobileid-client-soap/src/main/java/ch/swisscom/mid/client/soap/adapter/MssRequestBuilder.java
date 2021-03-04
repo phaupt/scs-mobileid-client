@@ -21,11 +21,11 @@ import java.math.BigInteger;
 import java.util.List;
 
 import ch.swisscom.mid.client.config.ClientConfiguration;
-import ch.swisscom.mid.client.model.DataToBeSigned;
-import ch.swisscom.mid.client.model.ProfileRequest;
-import ch.swisscom.mid.client.model.SignatureRequest;
-import ch.swisscom.mid.client.model.UserLangAdditionalService;
+import ch.swisscom.mid.client.model.*;
 import ch.swisscom.mid.client.utils.Utils;
+import ch.swisscom.ts102204.ext.v1_0.ReceiptExtensionType;
+import ch.swisscom.ts102204.ext.v1_0.ReceiptMessagingModeType;
+import ch.swisscom.ts102204.ext.v1_0.ReceiptProfileType;
 import fi.ficom.mss.ts102204.v1_0.ObjectFactory;
 
 public class MssRequestBuilder {
@@ -43,7 +43,7 @@ public class MssRequestBuilder {
         request.setMessagingMode(sync ? MessagingModeType.SYNCH : MessagingModeType.ASYNCH_CLIENT_SERVER);
         /* now set the elements */
         // Set the AP info
-        request.setAPInfo(createApInfo(config.getApId(), config.getApPassword()));
+        request.setAPInfo(createApInfo(config));
         // Set the MSSP info
         request.setMSSPInfo(createMsspInfo(config));
         // Set the MobileUser
@@ -60,10 +60,46 @@ public class MssRequestBuilder {
         return request;
     }
 
+    public static MSSStatusReqType createStatusQueryReq(ClientConfiguration config, SignatureTracking signatureTracking) {
+        MSSStatusReqType mssReq = new MSSStatusReqType();
+        mssReq.setAPInfo(createApInfo(config));
+        mssReq.setMSSPInfo(createMsspInfo(config));
+        mssReq.setMajorVersion(longToBigInteger(signatureTracking.getMajorVersion()));
+        mssReq.setMinorVersion(longToBigInteger(signatureTracking.getMinorVersion()));
+        mssReq.setMSSPTransID(signatureTracking.getTransactionId());
+        mssReq.setMobileUser(createMobileUser(signatureTracking.getMobileUserMsisdn()));
+        return mssReq;
+    }
+
+    public static MSSReceiptReqType createReceiptReq(ClientConfiguration config,
+                                                     SignatureTracking signatureTracking,
+                                                     ReceiptRequest clientRequest) {
+        StatusCodeType mssStatusCode = new StatusCodeType();
+        mssStatusCode.setValue(BigInteger.valueOf(clientRequest.getStatusCode().getCode()));
+
+        StatusType mssStatus = new StatusType();
+        mssStatus.setStatusCode(mssStatusCode);
+        if (clientRequest.getRequestExtension() != null) {
+            mssStatus.setStatusDetail(createStatusDetail(clientRequest.getRequestExtension()));
+        }
+
+        MSSReceiptReqType mssReq = new MSSReceiptReqType();
+        mssReq.setMajorVersion(longToBigInteger(clientRequest.getMajorVersion()));
+        mssReq.setMinorVersion(longToBigInteger(clientRequest.getMinorVersion()));
+        mssReq.setAPInfo(createApInfo(config));
+        mssReq.setMSSPInfo(createMsspInfo(config));
+        mssReq.setMobileUser(createMobileUser(signatureTracking.getMobileUserMsisdn()));
+        mssReq.setMSSPTransID(signatureTracking.getTransactionId());
+        mssReq.setMessage(createMessage(clientRequest.getMessageToBeDisplayed()));
+        mssReq.setStatus(mssStatus);
+
+        return mssReq;
+    }
+
     public static MSSProfileReqType createProfileReq(ClientConfiguration config,
                                                      ProfileRequest profileRequest) {
         MSSProfileReqType mssProfileReq = new MSSProfileReqType();
-        mssProfileReq.setAPInfo(createApInfo(config.getApId(), config.getApPassword()));
+        mssProfileReq.setAPInfo(createApInfo(config));
         mssProfileReq.setMajorVersion(longToBigInteger(profileRequest.getMajorVersion()));
         mssProfileReq.setMinorVersion(longToBigInteger(profileRequest.getMinorVersion()));
         mssProfileReq.setMSSPInfo(createMsspInfo(config));
@@ -82,10 +118,10 @@ public class MssRequestBuilder {
      * @throws ch.swisscom.mid.client.model.DataAssemblyException in case errors are encountered while constructing the
      *                                                            {@link MessageAbstractType.APInfo} instance
      */
-    private static MessageAbstractType.APInfo createApInfo(String apId, String apPassword) {
+    private static MessageAbstractType.APInfo createApInfo(ClientConfiguration config) {
         MessageAbstractType.APInfo apInfoType = new MessageAbstractType.APInfo();
-        apInfoType.setAPID(apId);
-        apInfoType.setAPPWD(apPassword);
+        apInfoType.setAPID(config.getApId());
+        apInfoType.setAPPWD(config.getApPassword());
         apInfoType.setAPTransID(Utils.generateTransId());
         apInfoType.setInstant(Utils.generateInstantAsXmlGregorianCalendar());
         return apInfoType;
@@ -175,6 +211,39 @@ public class MssRequestBuilder {
 
     private static BigInteger longToBigInteger(String valueAsString) {
         return BigInteger.valueOf(Long.parseLong(valueAsString));
+    }
+
+    private static DataType createMessage(MessageToBeDisplayed messageToBeDisplayed) {
+        DataType message = new DataType();
+        message.setValue(messageToBeDisplayed.getData());
+        message.setEncoding(messageToBeDisplayed.getEncoding());
+        message.setMimeType(messageToBeDisplayed.getMimeType());
+        return message;
+    }
+
+    private static StatusDetailType createStatusDetail(ch.swisscom.mid.client.model.ReceiptRequestExtension extension) {
+        ReceiptProfileType mssReceiptProfile = new ReceiptProfileType();
+        mssReceiptProfile.setLanguage(extension.getReceiptProfile().getLanguage());
+        mssReceiptProfile.setReceiptProfileURI(extension.getReceiptProfile().getProfileUri());
+
+        ReceiptExtensionType mssExtension = new ReceiptExtensionType();
+        mssExtension.setReceiptMessagingMode(toMssModel(extension.getMessagingMode()));
+        mssExtension.setUserAck(extension.isRequestUserAck());
+        mssExtension.setReceiptProfile(mssReceiptProfile);
+
+        StatusDetailType mssStatusDetail = new StatusDetailType();
+        mssStatusDetail.getRegistrationOutputOrEncryptedRegistrationOutputOrEncryptionCertificates().add(mssExtension);
+        return mssStatusDetail;
+    }
+
+    private static ReceiptMessagingModeType toMssModel(ReceiptMessagingMode mode) {
+        if (mode == null) {
+            return null;
+        }
+        if (mode == ReceiptMessagingMode.SYNC) {
+            return ReceiptMessagingModeType.SYNCH;
+        }
+        throw new IllegalArgumentException("Unknown receipt message mode: " + mode);
     }
 
 }

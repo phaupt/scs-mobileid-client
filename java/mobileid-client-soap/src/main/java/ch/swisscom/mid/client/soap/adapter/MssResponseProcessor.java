@@ -16,7 +16,10 @@
 package ch.swisscom.mid.client.soap.adapter;
 
 import org.etsi.uri.ts102204.v1_1.*;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
+import java.math.BigInteger;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
@@ -26,9 +29,13 @@ import java.util.stream.Collectors;
 import javax.xml.bind.JAXBElement;
 import javax.xml.namespace.QName;
 
+import ch.swisscom.mid.client.MIDFlowException;
 import ch.swisscom.mid.client.config.DefaultConfiguration;
+import ch.swisscom.mid.client.config.TrafficObserver;
+import ch.swisscom.mid.client.impl.Loggers;
 import ch.swisscom.mid.client.model.*;
 import ch.swisscom.mid.ts102204.as.v1.SubscriberInfoDetail;
+import ch.swisscom.ts102204.ext.v1_0.ReceiptExtensionType;
 import fi.ficom.mss.ts102204.v1_0.ServiceResponses;
 import fi.methics.ts102204.ext.v1_0.CertificateType;
 import fi.methics.ts102204.ext.v1_0.MobileUserType;
@@ -38,6 +45,8 @@ import fi.methics.ts102204.ext.v1_0.SscdListType;
 import fi.methics.ts102204.ext.v1_0.SscdType;
 
 public class MssResponseProcessor {
+
+    private static final Logger logProtocol = LoggerFactory.getLogger(Loggers.LOGGER_CLIENT_PROTOCOL);
 
     public static SignatureResponse processMssSignatureResponse(MSSSignatureRespType mssResponse) {
         SignatureResponse signatureResponse = new SignatureResponse();
@@ -58,6 +67,7 @@ public class MssResponseProcessor {
         }
         return signatureResponse;
     }
+
 
     public static ProfileResponse processMssProfileQueryResponse(MSSProfileRespType mssResponse) {
         ProfileResponse response = new ProfileResponse();
@@ -106,6 +116,82 @@ public class MssResponseProcessor {
             }
         }
         return response;
+    }
+
+    public static SignatureTracking createSignatureTracking(MSSSignatureRespType mssResponse, TrafficObserver trafficObserver) {
+        if (mssResponse != null) {
+            SignatureTracking result = new SignatureTracking();
+            result.setTrafficObserver(trafficObserver);
+            result.setTransactionId(mssResponse.getMSSPTransID());
+            result.setMobileUserMsisdn(mssResponse.getMobileUser().getMSISDN());
+            return result;
+        } else {
+            throw new MIDFlowException("Invalid MSS response received. " +
+                                       "Cannot parse it and convert it to a valid " +
+                                       SignatureTracking.class.getSimpleName(),
+                                       MssFaultProcessor.processFailure(FailureReason.MID_INVALID_RESPONSE_FAILURE));
+        }
+    }
+
+    public static ReceiptResponse processReceiptResponse(MSSReceiptRespType mssResponse) {
+        Status status = new Status();
+        ReceiptResponseExtension receiptResponseExtension = null;
+        if (mssResponse.getStatus() != null) {
+            StatusType mssStatus = mssResponse.getStatus();
+            StatusCodeType mssStatusCode = mssStatus.getStatusCode();
+            if (mssStatusCode != null) {
+                BigInteger statusCode = mssStatusCode.getValue();
+                if (statusCode != null) {
+                    String statusCodeString = String.valueOf(statusCode);
+                    status.setStatusCodeString(statusCodeString);
+                    status.setStatusCode(StatusCode.getByStatusCodeString(statusCodeString));
+                    status.setStatusMessage(status.getStatusCode().name());
+                }
+            }
+            if (mssStatus.getStatusDetail() != null &&
+                mssStatus.getStatusDetail().getRegistrationOutputOrEncryptedRegistrationOutputOrEncryptionCertificates() != null) {
+                List<Object> mssResponseExtensionList = mssStatus
+                    .getStatusDetail()
+                    .getRegistrationOutputOrEncryptedRegistrationOutputOrEncryptionCertificates();
+                if (mssResponseExtensionList.size() == 1) {
+                    receiptResponseExtension = processReceiptRespExtension(
+                        (ReceiptExtensionType) mssStatus.getStatusDetail()
+                            .getRegistrationOutputOrEncryptedRegistrationOutputOrEncryptionCertificates()
+                            .get(0));
+                } else {
+                    logProtocol.warn("Expected one MSS receipt extension in the MSS Receipt response. " +
+                                     "Instead found [{}] extensions. " +
+                                     "Skipping the receipt extension processing altogether", mssResponseExtensionList.size());
+                }
+            }
+        }
+
+        ReceiptResponse response = new ReceiptResponse();
+        response.setStatus(status);
+        response.setResponseExtension(receiptResponseExtension);
+
+        return response;
+    }
+
+    public static SignatureResponse processStatusQueryResponse(MSSStatusRespType mssResponse, SignatureTracking originalTracking) {
+        if (mssResponse != null) {
+            SignatureResponse result = new SignatureResponse();
+            result.setMajorVersion(mssResponse.getMajorVersion().toString());
+            result.setMinorVersion(mssResponse.getMinorVersion().toString());
+            result.setTracking(originalTracking);
+            SignatureType mssSignature = mssResponse.getMSSSignature();
+            if (mssSignature != null) {
+                result.setBase64Signature(new String(mssSignature.getBase64Signature(), StandardCharsets.UTF_8));
+            }
+            result.setStatus(processStatus(mssResponse.getStatus()));
+            result.setAdditionalServiceResponses(processAdditionalServiceResponses(mssResponse.getStatus()));
+            return result;
+        } else {
+            throw new MIDFlowException("Invalid MSS status response received. " +
+                                       "Cannot parse it and convert it to a valid " +
+                                       SignatureResponse.class.getSimpleName(),
+                                       MssFaultProcessor.processFailure(FailureReason.MID_INVALID_RESPONSE_FAILURE));
+        }
     }
 
     // ----------------------------------------------------------------------------------------------------
@@ -213,6 +299,21 @@ public class MssResponseProcessor {
             }
         }
         return deviceInfo;
+    }
+
+    private static ReceiptResponseExtension processReceiptRespExtension(ReceiptExtensionType mssReceiptExtension) {
+        if (mssReceiptExtension == null) {
+            return null;
+        }
+
+        ReceiptResponseExtension extension = new ReceiptResponseExtension();
+        extension.setMessagingMode(ReceiptMessagingMode.getByValue(mssReceiptExtension.getReceiptMessagingMode().value()));
+        extension.setClientAck(mssReceiptExtension.isClientAck());
+        extension.setNetworkAck(mssReceiptExtension.isNetworkAck());
+        extension.setUserAck(mssReceiptExtension.isUserAck());
+        extension.setUserResponse(mssReceiptExtension.getUserResponse());
+
+        return extension;
     }
 
 }

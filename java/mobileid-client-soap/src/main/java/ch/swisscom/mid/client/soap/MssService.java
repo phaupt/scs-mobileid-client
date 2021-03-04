@@ -19,9 +19,9 @@ import ch.swisscom.mid.client.config.TrafficObserver;
 
 public class MssService<PortType> {
 
-    private PortType port;
+    private final PortType port;
 
-    private SoapTrafficHandler trafficHandler;
+    private final SoapTrafficHandler trafficHandler;
 
     public MssService(PortType port, SoapTrafficHandler trafficHandler) {
         this.port = port;

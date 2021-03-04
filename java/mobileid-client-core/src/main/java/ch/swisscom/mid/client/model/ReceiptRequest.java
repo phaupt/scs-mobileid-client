@@ -16,6 +16,7 @@
 package ch.swisscom.mid.client.model;
 
 import ch.swisscom.mid.client.config.DefaultConfiguration;
+import ch.swisscom.mid.client.config.TrafficObserver;
 
 import static ch.swisscom.mid.client.utils.Utils.dataNotEmpty;
 import static ch.swisscom.mid.client.utils.Utils.dataNotNull;
@@ -31,6 +32,8 @@ public class ReceiptRequest {
     private StatusCode statusCode;
 
     private ReceiptRequestExtension requestExtension;
+
+    private TrafficObserver trafficObserver;
 
     // ----------------------------------------------------------------------------------------------------
 
@@ -75,11 +78,22 @@ public class ReceiptRequest {
     }
 
     public ReceiptRequestExtension getRequestExtension() {
+        if (requestExtension == null) {
+            requestExtension = new ReceiptRequestExtension();
+        }
         return requestExtension;
     }
 
     public void setRequestExtension(ReceiptRequestExtension requestExtension) {
         this.requestExtension = requestExtension;
+    }
+
+    public TrafficObserver getTrafficObserver() {
+        return trafficObserver;
+    }
+
+    public void setTrafficObserver(TrafficObserver trafficObserver) {
+        this.trafficObserver = trafficObserver;
     }
 
     // ----------------------------------------------------------------------------------------------------
@@ -95,4 +109,15 @@ public class ReceiptRequest {
         }
     }
 
+    @Override
+    public String toString() {
+        return "ReceiptRequest{" +
+               "majorVersion='" + majorVersion + '\'' +
+               ", minorVersion='" + minorVersion + '\'' +
+               ", messageToBeDisplayed=" + messageToBeDisplayed +
+               ", statusCode=" + statusCode +
+               ", requestExtension=" + requestExtension +
+               ", trafficObserver=" + trafficObserver +
+               '}';
+    }
 }

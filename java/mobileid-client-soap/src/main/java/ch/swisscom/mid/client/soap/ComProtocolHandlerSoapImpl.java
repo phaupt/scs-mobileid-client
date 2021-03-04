@@ -18,11 +18,10 @@ package ch.swisscom.mid.client.soap;
 import org.apache.commons.pool2.ObjectPool;
 import org.apache.commons.pool2.impl.GenericObjectPool;
 import org.etsi.uri.ts102204.etsi204_kiuru.MSSProfileQueryType;
+import org.etsi.uri.ts102204.etsi204_kiuru.MSSReceiptType;
 import org.etsi.uri.ts102204.etsi204_kiuru.MSSSignaturePortType;
-import org.etsi.uri.ts102204.v1_1.MSSProfileReqType;
-import org.etsi.uri.ts102204.v1_1.MSSProfileRespType;
-import org.etsi.uri.ts102204.v1_1.MSSSignatureReqType;
-import org.etsi.uri.ts102204.v1_1.MSSSignatureRespType;
+import org.etsi.uri.ts102204.etsi204_kiuru.MSSStatusQueryType;
+import org.etsi.uri.ts102204.v1_1.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -47,6 +46,8 @@ public class ComProtocolHandlerSoapImpl implements ComProtocolHandler {
 
     private ClientConfiguration config;
     private ObjectPool<MssService<MSSSignaturePortType>> mssSignatureServicePool;
+    private ObjectPool<MssService<MSSStatusQueryType>> mssStatusQueryServicePool;
+    private ObjectPool<MssService<MSSReceiptType>> mssReceiptServicePool;
     private ObjectPool<MssService<MSSProfileQueryType>> mssProfileQueryServicePool;
 
     @Override
@@ -60,6 +61,12 @@ public class ComProtocolHandlerSoapImpl implements ComProtocolHandler {
         mssSignatureServicePool = new GenericObjectPool<>(new MssServiceFactory<>(config,
                                                                                   MSSSignaturePortType.class,
                                                                                   config.getUrls()::getSignatureServiceUrl));
+        mssStatusQueryServicePool = new GenericObjectPool<>(new MssServiceFactory<>(config,
+                                                                                    MSSStatusQueryType.class,
+                                                                                    config.getUrls()::getStatusQueryServiceUrl));
+        mssReceiptServicePool = new GenericObjectPool<>(new MssServiceFactory<>(config,
+                                                                                MSSReceiptType.class,
+                                                                                config.getUrls()::getReceiptServiceUrl));
         mssProfileQueryServicePool = new GenericObjectPool<>(new MssServiceFactory<>(config,
                                                                                      MSSProfileQueryType.class,
                                                                                      config.getUrls()::getProfileQueryServiceUrl));
@@ -75,7 +82,7 @@ public class ComProtocolHandlerSoapImpl implements ComProtocolHandler {
 
     @Override
     public SignatureResponse requestSyncSignature(SignatureRequest request) {
-        logProtocol.info("MSS Signature: Sending request: [{}]", request);
+        logProtocol.info("MSS Signature (sync): Sending request: [{}]", request);
         MSSSignatureReqType mssSignatureReq = MssRequestBuilder.createSignatureReq(config, request, true);
         notifyTrafficObserverForApTransId(request.getTrafficObserver(), mssSignatureReq.getAPInfo().getAPTransID());
         MSSSignatureRespType mssSignatureResp;
@@ -84,11 +91,13 @@ public class ComProtocolHandlerSoapImpl implements ComProtocolHandler {
             mssSignatureService = mssSignatureServicePool.borrowObject();
             mssSignatureService.registerTrafficObserverForThisRequest(request.getTrafficObserver());
             mssSignatureResp = mssSignatureService.getPort().mssSignature(mssSignatureReq);
-            logClient.info("Received MSS signature response: [{}]", mssSignatureResp == null ? "null" : "not-null, looks OK");
+            logClient.info("Received MSS (sync) signature response: [{}]", mssSignatureResp == null ? "null" : "not-null, looks OK");
         } catch (SOAPFaultException e) {
-            throw new MIDFlowException("SOAP Fault received", e, MssFaultProcessor.processSoapFaultException(e));
+            throw new MIDFlowException("SOAP Fault received", e,
+                                       MssFaultProcessor.processSoapFaultException(e));
         } catch (Exception e) {
-            throw new MIDFlowException("Error in Signature operation.", e, MssFaultProcessor.processException(e, FailureReason.MID_SERVICE_FAILURE));
+            throw new MIDFlowException("Error in (sync) Signature operation.", e,
+                                       MssFaultProcessor.processException(e, FailureReason.MID_SERVICE_FAILURE));
         } finally {
             if (mssSignatureService != null) {
                 try {
@@ -99,22 +108,104 @@ public class ComProtocolHandlerSoapImpl implements ComProtocolHandler {
                 }
             }
         }
-        return MssResponseProcessor.processMssSignatureResponse(mssSignatureResp);
+        SignatureResponse signatureResponse = MssResponseProcessor.processMssSignatureResponse(mssSignatureResp);
+        signatureResponse.setTracking(MssResponseProcessor.createSignatureTracking(mssSignatureResp, request.getTrafficObserver()));
+        return signatureResponse;
     }
 
     @Override
     public SignatureResponse requestAsyncSignature(SignatureRequest request) {
-        throw new UnsupportedOperationException("Async signature is not yet supported");
+        logProtocol.info("MSS Signature (async): Sending request: [{}]", request);
+        MSSSignatureReqType mssSignatureReq = MssRequestBuilder.createSignatureReq(config, request, false);
+        notifyTrafficObserverForApTransId(request.getTrafficObserver(), mssSignatureReq.getAPInfo().getAPTransID());
+        MSSSignatureRespType mssSignatureResp;
+        MssService<MSSSignaturePortType> mssSignatureService = null;
+        try {
+            mssSignatureService = mssSignatureServicePool.borrowObject();
+            mssSignatureService.registerTrafficObserverForThisRequest(request.getTrafficObserver());
+            mssSignatureResp = mssSignatureService.getPort().mssSignature(mssSignatureReq);
+            logClient.info("Received MSS (async) signature response: [{}]", mssSignatureResp == null ? "null" : "not-null, looks OK");
+        } catch (SOAPFaultException e) {
+            throw new MIDFlowException("SOAP Fault received", e,
+                                       MssFaultProcessor.processSoapFaultException(e));
+        } catch (Exception e) {
+            throw new MIDFlowException("Error in (async) Signature operation.", e,
+                                       MssFaultProcessor.processException(e, FailureReason.MID_SERVICE_FAILURE));
+        } finally {
+            if (mssSignatureService != null) {
+                try {
+                    mssSignatureService.clearTrafficObserver();
+                    mssSignatureServicePool.returnObject(mssSignatureService);
+                } catch (Exception e) {
+                    logClient.error("Failed to return MSS Signature Port object back to the pool", e);
+                }
+            }
+        }
+        SignatureResponse signatureResponse = MssResponseProcessor.processMssSignatureResponse(mssSignatureResp);
+        signatureResponse.setTracking(MssResponseProcessor.createSignatureTracking(mssSignatureResp, request.getTrafficObserver()));
+        return signatureResponse;
     }
 
     @Override
     public SignatureResponse pollForSignatureStatus(SignatureTracking signatureTracking) {
-        throw new UnsupportedOperationException("Signature status poll is not yet supported");
+        logProtocol.info("MSS Status Query: Sending request for signature tracking object: [{}]", signatureTracking);
+        MSSStatusReqType mssStatusReqType = MssRequestBuilder.createStatusQueryReq(config, signatureTracking);
+        notifyTrafficObserverForApTransId(signatureTracking.getTrafficObserver(), mssStatusReqType.getAPInfo().getAPTransID());
+        MSSStatusRespType mssStatusRespType;
+        MssService<MSSStatusQueryType> mssStatusQueryService = null;
+        try {
+            mssStatusQueryService = mssStatusQueryServicePool.borrowObject();
+            mssStatusQueryService.registerTrafficObserverForThisRequest(signatureTracking.getTrafficObserver());
+            mssStatusRespType = mssStatusQueryService.getPort().mssStatusQuery(mssStatusReqType);
+            logClient.info("Received MSS Status Query response: [{}]", mssStatusRespType == null ? "null" : "not-null, looks OK");
+        } catch (SOAPFaultException e) {
+            throw new MIDFlowException("SOAP Fault received", e,
+                                       MssFaultProcessor.processSoapFaultException(e));
+        } catch (Exception e) {
+            throw new MIDFlowException("Error in Status Query operation.", e,
+                                       MssFaultProcessor.processException(e, FailureReason.MID_SERVICE_FAILURE));
+        } finally {
+            if (mssStatusQueryService != null) {
+                try {
+                    mssStatusQueryService.clearTrafficObserver();
+                    mssStatusQueryServicePool.returnObject(mssStatusQueryService);
+                } catch (Exception e) {
+                    logClient.error("Failed to return MSS Status Query object back to the pool", e);
+                }
+            }
+        }
+        return MssResponseProcessor.processStatusQueryResponse(mssStatusRespType, signatureTracking);
     }
 
     @Override
     public ReceiptResponse requestSyncReceipt(SignatureTracking signatureTracking, ReceiptRequest request) {
-        throw new UnsupportedOperationException("Receipt signature is not yet supported");
+        logProtocol.info("MSS Receipt (sync): Sending request: [{}]", request);
+        MSSReceiptReqType mssReceiptReq = MssRequestBuilder.createReceiptReq(config, signatureTracking, request);
+        notifyTrafficObserverForApTransId(request.getTrafficObserver(), mssReceiptReq.getAPInfo().getAPTransID());
+        MSSReceiptRespType mssReceiptResp;
+        MssService<MSSReceiptType> mssReceiptService = null;
+        try {
+            mssReceiptService = mssReceiptServicePool.borrowObject();
+            mssReceiptService.registerTrafficObserverForThisRequest(request.getTrafficObserver());
+            mssReceiptResp = mssReceiptService.getPort().mssReceipt(mssReceiptReq);
+            logClient.info("Received MSS (async) signature response: [{}]", mssReceiptResp == null ? "null" : "not-null, looks OK");
+        } catch (SOAPFaultException e) {
+            throw new MIDFlowException("SOAP Fault received", e,
+                                       MssFaultProcessor.processSoapFaultException(e));
+        } catch (Exception e) {
+            throw new MIDFlowException("Error in (async) Signature operation.", e,
+                                       MssFaultProcessor.processException(e, FailureReason.MID_SERVICE_FAILURE));
+        } finally {
+            if (mssReceiptService != null) {
+                try {
+                    mssReceiptService.clearTrafficObserver();
+                    mssReceiptServicePool.returnObject(mssReceiptService);
+                } catch (Exception e) {
+                    logClient.error("Failed to return MSS Receipt Port object back to the pool", e);
+                }
+            }
+        }
+        return MssResponseProcessor.processReceiptResponse(mssReceiptResp);
     }
 
     @Override

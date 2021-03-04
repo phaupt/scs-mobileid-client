@@ -36,6 +36,12 @@ public class MssFaultProcessor {
 
     private static final Logger log = LoggerFactory.getLogger(Loggers.LOGGER_CLIENT_PROTOCOL);
 
+    public static Fault processFailure(FailureReason failureReason) {
+        Fault result = new Fault();
+        result.setFailureReason(failureReason);
+        return result;
+    }
+
     public static Fault processSoapFaultException(SOAPFaultException exception) {
         Fault fault = null;
         if (exception != null) {
