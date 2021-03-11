@@ -15,19 +15,22 @@
  */
 package ch.swisscom.mid.client.soap;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.tomakehurst.wiremock.WireMockServer;
-import com.github.tomakehurst.wiremock.http.MimeType;
 import com.github.tomakehurst.wiremock.stubbing.Scenario;
 
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 import ch.swisscom.mid.client.MIDClient;
+import ch.swisscom.mid.client.config.DefaultConfiguration;
 import ch.swisscom.mid.client.impl.MIDClientImpl;
 import ch.swisscom.mid.client.model.*;
 
+import static ch.swisscom.mid.client.soap.TestData.CONTENT_TYPE_SOAP_XML;
+import static ch.swisscom.mid.client.soap.TestSupport.assertResponseTo;
 import static ch.swisscom.mid.client.soap.TestSupport.buildConfig;
 import static ch.swisscom.mid.client.soap.TestSupport.fileToString;
 import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
@@ -38,7 +41,6 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.notNullValue;
 
-@Disabled
 public class AsyncSignatureTest {
 
     private static WireMockServer server;
@@ -61,36 +63,36 @@ public class AsyncSignatureTest {
     // ----------------------------------------------------------------------------------------------------
 
     @Test
-    public void testSignature_success() {
+    public void testSignature_success() throws JsonProcessingException {
         server.stubFor(
-            post(urlEqualTo("/rest/service"))
+            post(urlEqualTo(DefaultConfiguration.SOAP_SIGNATURE_PORT_SUB_URL))
                 .inScenario("Async signature")
                 .whenScenarioStateIs(Scenario.STARTED)
                 .willReturn(
                     aResponse()
-                        .withHeader("Content-Type", MimeType.JSON.toString())
-                        .withBody(fileToString("/samples/rest-response-async-signature.json")))
+                        .withHeader("Content-Type", CONTENT_TYPE_SOAP_XML)
+                        .withBody(fileToString("/samples/soap-response-async-signature.xml")))
                 .willSetStateTo("Signature running - poll 0"));
 
         server.stubFor(
-            post(urlEqualTo("/rest/service"))
+            post(urlEqualTo(DefaultConfiguration.SOAP_STATUS_QUERY_PORT_SUB_URL))
                 .inScenario("Async signature")
                 .whenScenarioStateIs("Signature running - poll 0")
                 .willReturn(
                     aResponse()
-                        .withHeader("Content-Type", MimeType.JSON.toString())
-                        .withBody(fileToString("/samples/rest-response-status-outstanding.json")))
+                        .withHeader("Content-Type", CONTENT_TYPE_SOAP_XML)
+                        .withBody(fileToString("/samples/soap-response-status-outstanding.xml")))
                 .willSetStateTo("Signature running - poll 1")
         );
 
         server.stubFor(
-            post(urlEqualTo("/rest/service"))
+            post(urlEqualTo(DefaultConfiguration.SOAP_STATUS_QUERY_PORT_SUB_URL))
                 .inScenario("Async signature")
                 .whenScenarioStateIs("Signature running - poll 1")
                 .willReturn(
                     aResponse()
-                        .withHeader("Content-Type", MimeType.JSON.toString())
-                        .withBody(fileToString("/samples/rest-response-status-signature.json")))
+                        .withHeader("Content-Type", CONTENT_TYPE_SOAP_XML)
+                        .withBody(fileToString("/samples/soap-response-status-signature.xml")))
                 .willSetStateTo("Signature finished")
         );
 
@@ -101,7 +103,7 @@ public class AsyncSignatureTest {
         assertThat(response.getStatus().getStatusMessage(), is("REQUEST_OK"));
         assertThat(response.getSignatureProfile(), is(TestData.CUSTOM_SIGNATURE_PROFILE));
         assertThat(response.getTracking(), is(notNullValue()));
-        assertThat(response.getTracking().getMobileUserMsisdn(), is(TrialNumbers.ONE_THAT_GIVES_MISSING_PARAM));
+        assertThat(response.getTracking().getMobileUserMsisdn(), is(TestData.MSISDN));
         assertThat(response.getTracking().getTransactionId(), is(TestData.CUSTOM_TRANS_ID));
 
         response = client.pollForSignatureStatus(response.getTracking());
@@ -113,6 +115,7 @@ public class AsyncSignatureTest {
         assertThat(response.getStatus().getStatusCodeString(), is("500"));
         assertThat(response.getBase64Signature(), is(notNullValue()));
         assertThat(response.getBase64Signature().length(), is(TestData.BASE64_SIGNATURE_LENGTH));
+        assertResponseTo(response, "/samples/soap-response-status-signature-expected.json");
     }
 
     // ----------------------------------------------------------------------------------------------------
@@ -123,7 +126,7 @@ public class AsyncSignatureTest {
         request.getDataToBeSigned().setData("test.com: Please sign this document");
         request.getDataToBeSigned().setEncodingToUtf8();
         request.getDataToBeSigned().setMimeTypeToTextPlain();
-        request.getMobileUser().setMsisdn(TrialNumbers.ONE_THAT_GIVES_MISSING_PARAM);
+        request.getMobileUser().setMsisdn(TestData.MSISDN);
         request.setSignatureProfile(SignatureProfiles.DEFAULT_PROFILE);
         request.addAdditionalService(new SubscriberInfoAdditionalService());
         return request;

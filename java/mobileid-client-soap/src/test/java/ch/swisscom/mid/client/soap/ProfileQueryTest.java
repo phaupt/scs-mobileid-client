@@ -15,20 +15,21 @@
  */
 package ch.swisscom.mid.client.soap;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.github.tomakehurst.wiremock.WireMockServer;
-import com.github.tomakehurst.wiremock.http.MimeType;
 
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 import ch.swisscom.mid.client.MIDClient;
+import ch.swisscom.mid.client.config.DefaultConfiguration;
 import ch.swisscom.mid.client.impl.MIDClientImpl;
 import ch.swisscom.mid.client.model.ProfileRequest;
 import ch.swisscom.mid.client.model.ProfileResponse;
 import ch.swisscom.mid.client.model.SignatureProfiles;
 
+import static ch.swisscom.mid.client.soap.TestSupport.assertResponseTo;
 import static ch.swisscom.mid.client.soap.TestSupport.buildConfig;
 import static ch.swisscom.mid.client.soap.TestSupport.fileToString;
 import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
@@ -38,7 +39,6 @@ import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.options
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.contains;
 
-@Disabled
 public class ProfileQueryTest {
 
     private static WireMockServer server;
@@ -61,21 +61,22 @@ public class ProfileQueryTest {
     // ----------------------------------------------------------------------------------------------------
 
     @Test
-    public void testProfileQuery_success() {
+    public void testProfileQuery_success() throws JsonProcessingException {
         server.stubFor(
-            post(urlEqualTo("/rest/service"))
+            post(urlEqualTo(DefaultConfiguration.SOAP_PROFILE_QUERY_PORT_SUB_URL))
                 .willReturn(
                     aResponse()
-                        .withHeader("Content-Type", MimeType.JSON.toString())
-                        .withBody(fileToString("/samples/rest-response-profile-query.json"))));
+                        .withHeader("Content-Type", TestData.CONTENT_TYPE_SOAP_XML)
+                        .withBody(fileToString("/samples/soap-response-profile-query.xml"))));
 
         ProfileRequest request = new ProfileRequest();
-        request.getMobileUser().setMsisdn("418888888888");
+        request.getMobileUser().setMsisdn(TestData.MSISDN);
         request.setExtensionParamsToAllValues();
 
         ProfileResponse response = client.requestProfile(request);
         assertThat(response.getSignatureProfiles(),
                    contains(SignatureProfiles.ANY_LOA4, SignatureProfiles.DEFAULT_PROFILE, SignatureProfiles.STK_LOA4));
+        assertResponseTo(response, "/samples/soap-response-profile-query-expected.json");
     }
 
 }

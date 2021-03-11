@@ -21,6 +21,10 @@ public class TestData {
 
     public static final String CUSTOM_TRANS_ID = "CAFE_BABE";
 
-    public static final int BASE64_SIGNATURE_LENGTH = 2214;
+    public static final int BASE64_SIGNATURE_LENGTH = 768;
+
+    public static final String MSISDN = "418888888888";
+
+    public static final String CONTENT_TYPE_SOAP_XML = "application/soap+xml";
 
 }

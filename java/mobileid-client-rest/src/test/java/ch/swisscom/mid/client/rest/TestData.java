@@ -21,6 +21,6 @@ public class TestData {
 
     public static final String CUSTOM_TRANS_ID = "CAFE_BABE";
 
-    public static final int BASE64_SIGNATURE_LENGTH = 2214;
+    public static final int BASE64_SIGNATURE_LENGTH = 768;
 
 }

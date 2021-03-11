@@ -15,6 +15,9 @@
  */
 package ch.swisscom.mid.client.soap;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
 import org.apache.commons.io.IOUtils;
 
 import java.io.IOException;
@@ -22,12 +25,16 @@ import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 
 import ch.swisscom.mid.client.config.ClientConfiguration;
-import ch.swisscom.mid.client.config.DefaultConfiguration;
 import ch.swisscom.mid.client.config.HttpConfiguration;
 import ch.swisscom.mid.client.config.TlsConfiguration;
 import ch.swisscom.mid.client.config.UrlsConfiguration;
 
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.is;
+
 public class TestSupport {
+
+    public static final ObjectMapper jacksonMapper = new ObjectMapper();
 
     public static ClientConfiguration buildConfig() {
         ClientConfiguration config = new ClientConfiguration();
@@ -36,8 +43,7 @@ public class TestSupport {
         config.setApPassword("TEST_ID");
 
         UrlsConfiguration urls = config.getUrls();
-        urls.setSignatureServiceUrl("http://localhost:8089" + DefaultConfiguration.SOAP_SIGNATURE_PORT_SUB_URL);
-        urls.setProfileQueryServiceUrl("http://localhost:8089" + DefaultConfiguration.SOAP_PROFILE_QUERY_PORT_SUB_URL);
+        urls.setAllServiceUrlsToBase("http://localhost:8089");
 
         TlsConfiguration tls = config.getTls();
         tls.setKeyStoreBytes(fileToBytes("/empty-store.jks"));
@@ -56,7 +62,7 @@ public class TestSupport {
     }
 
     public static String fileToString(String fileName) {
-        try (InputStream is = SyncSignatureTest.class.getResourceAsStream(fileName)) {
+        try (InputStream is = TestSupport.class.getResourceAsStream(fileName)) {
             return IOUtils.toString(is, StandardCharsets.UTF_8);
         } catch (IOException e) {
             throw new RuntimeException("Failed to load payload from file [" + fileName + "]", e);
@@ -64,10 +70,19 @@ public class TestSupport {
     }
 
     public static byte[] fileToBytes(String fileName) {
-        try (InputStream is = SyncSignatureTest.class.getResourceAsStream(fileName)) {
+        try (InputStream is = TestSupport.class.getResourceAsStream(fileName)) {
             return IOUtils.toByteArray(is);
         } catch (IOException e) {
             throw new RuntimeException("Failed to load payload from file [" + fileName + "]", e);
+        }
+    }
+
+    public static void assertResponseTo(Object response, String expectedFileName) {
+        try {
+            String responseJson = jacksonMapper.writerWithDefaultPrettyPrinter().writeValueAsString(response);
+            assertThat(responseJson, is(fileToString(expectedFileName).replace("    ", "  ")));
+        } catch (JsonProcessingException e) {
+            throw new RuntimeException(e);
         }
     }
 

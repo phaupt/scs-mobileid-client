@@ -22,6 +22,7 @@ import org.slf4j.LoggerFactory;
 import java.math.BigInteger;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.Base64;
 import java.util.List;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
@@ -183,7 +184,7 @@ public class MssResponseProcessor {
             result.setTracking(originalTracking);
             SignatureType mssSignature = mssResponse.getMSSSignature();
             if (mssSignature != null) {
-                result.setBase64Signature(new String(mssSignature.getBase64Signature(), StandardCharsets.UTF_8));
+                result.setBase64Signature(Base64.getEncoder().encodeToString(mssSignature.getBase64Signature()));
             }
             result.setStatus(processStatus(mssResponse.getStatus()));
             result.setAdditionalServiceResponses(processAdditionalServiceResponses(mssResponse.getStatus()));
@@ -208,7 +209,7 @@ public class MssResponseProcessor {
                 StatusCode statusCode = StatusCode.getByStatusCodeValue(statusCodeValue);
                 if (statusCode != null) {
                     result.setStatusCode(statusCode);
-                    result.setStatusCodeString(statusCode.name());
+                    result.setStatusCodeString(String.valueOf(statusCode.getCode()));
                 }
             }
             return result;
@@ -277,8 +278,8 @@ public class MssResponseProcessor {
                 List<Object> mssCertElementList = mssCert.getX509IssuerSerialOrX509SKIOrX509SubjectName();
                 if (mssCertElementList != null && mssCertElementList.size() > 0) {
                     CertificateData certificateData = new CertificateData();
-                    certificateData.setCertificateAsBase64(new String(((JAXBElement<byte[]>) mssCertElementList.get(0)).getValue(),
-                                                                      StandardCharsets.UTF_8));
+                    certificateData.setCertificateAsBase64(
+                        Base64.getEncoder().encodeToString(((JAXBElement<byte[]>) mssCertElementList.get(0)).getValue()));
                     if (mssCertElementList.size() > 1) {
                         certificateData.setSubjectName(((JAXBElement<String>) mssCertElementList.get(1)).getValue());
                     }
@@ -287,8 +288,8 @@ public class MssResponseProcessor {
                     if (mssCertElementList.size() > 2) {
                         for (int index = 2; index < mssCertElementList.size(); index += 2) {
                             certificateData = new CertificateData();
-                            certificateData.setCertificateAsBase64(new String(((JAXBElement<byte[]>) mssCertElementList.get(index)).getValue(),
-                                                                              StandardCharsets.UTF_8));
+                            certificateData.setCertificateAsBase64(
+                                Base64.getEncoder().encodeToString(((JAXBElement<byte[]>) mssCertElementList.get(0)).getValue()));
                             if (index + 1 < mssCertElementList.size()) {
                                 certificateData.setSubjectName(((JAXBElement<String>) mssCertElementList.get(index + 1)).getValue());
                             }
