@@ -1,6 +1,8 @@
 package ch.swisscom.mid.client.cli;
 
+import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -96,6 +98,7 @@ public class Cli {
         Properties properties = loadConfigProperties();
         PrettyPrintingTrafficObserver prettyPrinterTrafficObserver = new PrettyPrintingTrafficObserver();
         ObjectMapper jacksonMapper = new ObjectMapper();
+        jacksonMapper.configure(SerializationFeature.FAIL_ON_EMPTY_BEANS, false);
 
         ClientConfiguration clientConfig = new ClientConfiguration();
         clientConfig.setApId(properties.getProperty("client.msspApId"));
@@ -153,9 +156,9 @@ public class Cli {
                     response = midClient.requestAsyncSignature(request);
                     while (response.getStatus().getStatusCode() == StatusCode.REQUEST_OK ||
                            response.getStatus().getStatusCode() == StatusCode.OUTSTANDING_TRANSACTION) {
-                        response = midClient.pollForSignatureStatus(response.getTracking());
                         //noinspection BusyWait
                         Thread.sleep(5000);
+                        response = midClient.pollForSignatureStatus(response.getTracking());
                     }
                 }
                 System.out.println(response.toString());
@@ -348,6 +351,9 @@ public class Cli {
         }
         if (interfaceType == null) {
             interfaceType = INTERFACE_REST;
+        }
+        if (configFile == null) {
+            configFile = "config.properties";
         }
         continueExecution = true;
     }

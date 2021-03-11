@@ -162,7 +162,7 @@ public class ComProtocolHandlerRestImpl implements ComProtocolHandler {
     public SignatureResponse pollForSignatureStatus(SignatureTracking signatureTracking) {
         MSSStatusRequest requestWrapper = StatusQueryModelUtils.createStatusQueryRequest(config, signatureTracking);
         MSSStatusResponse responseWrapper = sendAndReceive("MSS Status Query",
-                                                           config.getUrls().getSignatureServiceUrl(),
+                                                           config.getUrls().getStatusQueryServiceUrl(),
                                                            requestWrapper, MSSStatusResponse.class,
                                                            signatureTracking.getTrafficObserver());
         return StatusQueryModelUtils.processStatusQueryResponse(responseWrapper, signatureTracking);
@@ -178,7 +178,7 @@ public class ComProtocolHandlerRestImpl implements ComProtocolHandler {
             throw new UnsupportedOperationException("There is no support for non-sync MSS Receipt Request");
         }
         MSSReceiptResponse responseWrapper = sendAndReceive(operationName,
-                                                            config.getUrls().getSignatureServiceUrl(),
+                                                            config.getUrls().getReceiptServiceUrl(),
                                                             requestWrapper, MSSReceiptResponse.class,
                                                             signatureTracking.getTrafficObserver());
         return ReceiptRequestModelUtils.processReceiptResponse(responseWrapper);

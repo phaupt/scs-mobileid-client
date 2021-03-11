@@ -46,6 +46,8 @@ public class Utils {
         HttpConfiguration http = config.getHttp();
         http.setConnectionTimeoutInMs(20 * 1000);
         http.setResponseTimeoutInMs(100 * 1000);
+        http.setMaxTotalConnections(20);
+        http.setMaxConnectionsPerRoute(10);
 
         return config;
     }
