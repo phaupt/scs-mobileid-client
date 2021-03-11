@@ -82,3 +82,40 @@ http.setResponseTimeoutInMs(100 * 1000);
 // this client is thread safe and can be reused anywhere in your application
 MIDClient client = new MIDClientImpl(config);
 ```
+
+## Logging configuration
+
+The Mobile ID client uses SLF4j and Logback for logging. It uses the following loggers:
+
+- ch.swisscom.mid.client - logging related to common parts of the client's functionality
+- ch.swisscom.mid.client.config - all activity related to configuring the client
+- ch.swisscom.mid.client.protocol - all activity related to talking to the Mobile ID service (except the actual request and response messages; see next)
+- ch.swisscom.mid.client.requestResponse - the (REST or SOAP) request and response messages, with any large data (e.g. Base64 signature, Base64 certificate content) stripped out
+- ch.swisscom.mid.client.fullRequestResponse - the (REST or SOAP) request and response messages in full content (including any large data)
+
+To configure the logging for the library, you can use the following config:
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+    <property name="LOGS" value="./logs"/>
+
+    <appender name="Console" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <pattern>%d{ISO8601} %highlight(%-5level) [%blue(%t)] %yellow(%C{1.}): %msg%n%throwable</pattern>
+        </encoder>
+    </appender>
+
+    <!-- LOG everything at INFO level -->
+    <root level="info">
+        <appender-ref ref="Console"/>
+    </root>
+
+    <logger name="org.apache.hc" level="warn"/>
+    <logger name="ch.swisscom.mid.client" level="debug"/>
+    <logger name="ch.swisscom.mid.client.config" level="debug"/>
+    <logger name="ch.swisscom.mid.client.protocol" level="debug"/>
+    <logger name="ch.swisscom.mid.client.requestResponse" level="debug"/>
+    <logger name="ch.swisscom.mid.client.fullRequestResponse" level="warn"/>
+
+</configuration>
+```

@@ -142,7 +142,7 @@ SignatureResponse response = client.requestAsyncSignature(request);
 // poll for signature status
 while (response.getStatus().getStatusCode() == StatusCode.REQUEST_OK ||
        response.getStatus().getStatusCode() == StatusCode.OUTSTANDING_TRANSACTION) {
-    Thread.sleep(1000);
+    Thread.sleep(5000);
     System.out.println("Pending: " + response);
     response = client.pollForSignatureStatus(response.getTracking());
 }

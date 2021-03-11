@@ -119,7 +119,7 @@ or with an async one (you have to do the polling for the final status):
 SignatureRequest request = new SignatureRequest();
 request.setUserLanguage(UserLanguage.ENGLISH);
 request.getDataToBeSigned().setData("Testing: Please sign this document");
-request.getMobileUser().setMsisdn("41**********");
+request.getMobileUser().setMsisdn("41790000000");
 request.setSignatureProfile(SignatureProfiles.DEFAULT_PROFILE);
 request.addAdditionalService(new SubscriberInfoAdditionalService());
 
@@ -127,8 +127,8 @@ try {
     SignatureResponse response = client.requestAsyncSignature(request);
     while (response.getStatus().getStatusCode() == StatusCode.REQUEST_OK ||
            response.getStatus().getStatusCode() == StatusCode.OUTSTANDING_TRANSACTION) {
-        System.out.println("Pending: " + response);
         Thread.sleep(5000);
+        System.out.println("Pending: " + response);
         response = client.pollForSignatureStatus(response.getTracking());
     }
     System.out.println(response.toString());
