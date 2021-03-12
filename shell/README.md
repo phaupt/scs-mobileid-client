@@ -16,9 +16,14 @@ Note that you will require the valid SSL certificate files `mycert.crt` and `myc
 ```
 Usage: ./mobileid-sign.sh <args> mobile 'message' userlang <receipt>
   -t value   - message type (SOAP, JSON); default SOAP
+  -s value   - signature profile to select the authentication method; default http://mid.swisscom.ch/MID/v1/AuthProfile1
+               possible values:
+               http://mid.swisscom.ch/MID/v1/AuthProfile1 = alias of http://mid.swisscom.ch/STK-LoA4
+               http://mid.swisscom.ch/Any-LoA4            = sim authentication preferred. fallback to app authentication method
+               http://mid.swisscom.ch/STK-LoA4            = force sim authentication
+               http://mid.swisscom.ch/Device-LoA4         = force app authentication
   -v         - verbose output
   -d         - debug mode
-  -e         - encrypted receipt
   mobile     - mobile number
   message    - message to be signed (and displayed)
                A placeholder #TRANSID# may be used anywhere in the message to include a unique transaction id
@@ -27,13 +32,13 @@ Usage: ./mobileid-sign.sh <args> mobile 'message' userlang <receipt>
 
   Example ./mobileid-sign.sh -v +41792080350 'test.com: Do you want to login to corporate VPN? (#TRANSID#)' en
           ./mobileid-sign.sh -t JSON -v +41792080350 'test.com: Do you want to login to corporate VPN? (#TRANSID#)' en
+          ./mobileid-sign.sh -s 'http://mid.swisscom.ch/Device-LoA4' -v +41792080350 'test.com: Do you want to login to corporate VPN? (#TRANSID#)' en
           ./mobileid-sign.sh -v +41792080350 'test.com: Do you want to login to corporate VPN? (#TRANSID#)' en 'test.com: Successful login into VPN'
-          ./mobileid-sign.sh -v -e +41792080350 'test.com: Do you need a new password? (#TRANSID#)' en 'test.com: Temporary password is 123456'
 ```
 
 ### Receipt Request
 ```
-Usage: ./mobileid-receipt.sh <args> mobile transID 'message' userlang <pubCert>
+Usage: ./mobileid-receipt.sh <args> mobile transID 'message' userlang
   -t value   - message type (SOAP, JSON); default SOAP
   -v         - verbose output
   -d         - debug mode
@@ -41,11 +46,9 @@ Usage: ./mobileid-receipt.sh <args> mobile transID 'message' userlang <pubCert>
   transID    - transaction id of the related signature request
   message    - message to be displayed
   userlang   - user language (one of en, de, fr, it)
-  pubCert    - optional public certificate file of the mobile user to encode the message
 
   Example ./mobileid-receipt.sh -v +41792080350 h29ah1 'Successful login into VPN' en
           ./mobileid-receipt.sh -t JSON -v +41792080350 h29ah1 'Successful login into VPN' en
-          ./mobileid-receipt.sh -v +41792080350 h29ah1 'Temporary password: 123456' en /tmp/_tmp.8OVlwv.sig.cert
 ```
 
 ### Profile Query Request
@@ -64,80 +67,18 @@ Usage: ./mobileid-query.sh <args> mobile
 ### Successful Signature
 
 ```
-./mobileid-sign.sh -v +41791234567 'Do you want to login?' en
+phaupt@AWS:~/NEW/mobileid/shell$ ./mobileid-sign.sh -v 41791234567 'test.com: Do you want to login to corporate VPN?' en
 OK with following details and checks:
- 1) Transaction ID : AP.TEST.21920.3921 -> same as in request
-    MSSP TransID   : h4n9x
- 2) Signed by      : +41791234567 -> same as in request
- 3) Signer         : subject= serialNumber=MIDCHE97FQPL3SL3,CN=:PN,C=CH
-                     issuer= C=ch,O=Swisscom,OU=Digital Certificate Services,CN=Swisscom Rubin CA 2
-                     validity= notBefore=Mar 12 08:23:40 2014 GMT notAfter=Mar 12 08:23:40 2017 GMT
-                     CRL check= OK
-                     OCSP check= good
- 4) Signed Data    : Do you want to login? -> Decode and verify: success and same as in request
+ 1) Transaction ID : AP.TEST.16766.7766 -> same as in request
+    MSSP TransID   : HE9dyebu
+ 2) Signed by      : 41791234567 -> same as in request
+ 3) Signer         : subject=serialNumber=MIDCHE0LMPAJJ828,CN=MIDCHE0LMPAJJ828:PN
+                     issuer=CN=Swisscom Rubin CA 3,OU=Digital Certificate Services,O=Swisscom,C=ch
+                     validity= notBefore=Apr  9 12:53:11 2020 GMT notAfter=Apr  9 12:53:11 2023 GMT
+ 4) Signed Data    : test.com: Do you want to login to corporate VPN? -> Decode and verify: success and same as in request
  5) Status code    : 500 with exit 0
     Status details : SIGNATURE
 ```
-
-### Successful Signature + Receipt
-```
-./mobileid-sign.sh -v +41791234567 'Do you want to login to corporate VPN?' en 'Successful login into VPN'
-OK with following details and checks:
- 1) Transaction ID : AP.TEST.21920.3921 -> same as in request
-    MSSP TransID   : h4n8o
- 2) Signed by      : +41791234567 -> same as in request
- 3) Signer         : subject= serialNumber=MIDCHE97FQPL3SL3,CN=:PN,C=CH
-                     issuer= C=ch,O=Swisscom,OU=Digital Certificate Services,CN=Swisscom Rubin CA 2
-                     validity= notBefore=Mar 12 08:23:40 2014 GMT notAfter=Mar 12 08:23:40 2017 GMT
-                     CRL check= OK
-                     OCSP check= good
- 4) Signed Data    : Do you want to login to corporate VPN? -> Decode and verify: success and same as in request
- 5) Status code    : 500 with exit 0
-    Status details : SIGNATURE
-OK with following details and checks:
- MSSP TransID   : h4n8o
- Status code    : 100 with exit 0
- Status details : REQUEST_OK
- User Response  : "status":"OK"    
-```
-
-### Successful Profile Query
-````
- ./mobileid-query.sh -v +41792454029
-OK with following details and checks:
- Status code    : 100 with exit 0
- Status details : REQUEST_OK
-````
-
-### Failed Signature
-```
-./mobileid-sign.sh -v +41792204080 'Hello' en
-FAILED on +41792204080 with error 105 (UNKNOWN_CLIENT: MSISDN is unknown) and exit 2
-
-./mobileid-sign.sh -v +4179abcdef 'Hello' en
-FAILED on +4179abcdef with error 101 (WRONG_PARAM: Illegal msisdn) and exit 2
-
-./mobileid-sign.sh -v +41793015146 'Hello' en
-FAILED on +41793015146 with error 401 (USER_CANCEL: User Cancelled the request) and exit 2
-```
-
-### Failed Receipt
-```
-./mobileid-receipt.sh -v +41792080350 h2ed05 en 'Successful login into VPN'
-FAILED on +41792080350 with mss:_101 (Receipt already sent for this transaction. Only one receipt allowed per transaction.) and exit 2
-
-./mobileid-receipt.sh -v +41792080350 h2ed01 en 'Successful login into VPN'
-FAILED on +41792080350 with mss:_101 (There is no such transaction.) and exit 2
-```
-
-### Failed Profile Query
-````
-./mobileid-query.sh -v +41798440457
-FAILED on +41798440457 with error 105 (UNKNOWN_CLIENT: MSISDN is unknown) and exit 2
-
-$ ./mobileid-query.sh -v +41796691873
-FAILED on +41796691873 with error 404 (NO_KEY_FOUND: Mobile user account needs to be activated) and exit 2
-````
 
 ## Known Issues
 
